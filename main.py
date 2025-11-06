@@ -12,6 +12,13 @@ variacoes_descricao = [
     "desc"
 ]
 
+variacoes_estoque = [
+    "disp",
+    "dsp",
+    "estoque",
+    "total",
+]
+
 variacoes_codigo_barras = [
     "Codigo_Barra",
     "Código_Barra",
@@ -38,11 +45,12 @@ def get_column(df: pd.DataFrame, dictionary):
                 return col
 
 
-def get_header_index(df: pd.DataFrame):
+def get_header_index(df: pd.DataFrame) -> int:
     pattern = '|'.join([v.replace('.', r'\.') for v in variacoes_codigo_barras])
     mask = df.apply(lambda col: col.astype(str).str.contains(pattern, case=False, na=False, regex=True))
     header_index = mask.any(axis=1)[::-1].idxmax()
     return header_index
+
 
 def produto_unico(ean: str, lista_prods: list[Produto]) -> bool:
     for prod in lista_prods:
@@ -54,15 +62,21 @@ def produto_unico(ean: str, lista_prods: list[Produto]) -> bool:
 
 def extract_products(file, sheet, produtos):
     df = pd.read_excel(file, sheet_name=sheet, header=None)
+    df = df.ffill()
+
     header_index = get_header_index(df)
-    df = pd.read_excel(file, sheet_name=sheet, header=header_index)
+    df.columns = df.iloc[header_index]
+    drop_header = header_index + 1
+    df = df[drop_header:].reset_index(drop=True)
+
     ean_column = get_column(df, variacoes_codigo_barras)
     description_column = get_column(df, variacoes_descricao)
-    print(sheet)
+    estoque_column = get_column(df, variacoes_estoque)
+
     if not df.empty:
         for index, row in df.iterrows():
             if not pd.isna(row[ean_column]) and produto_unico(row[ean_column], produtos):
-                produtos.append(Produto(row[ean_column], row[description_column]))
+                produtos.append(Produto(row[ean_column], row[description_column], row[estoque_column]))
     else:
         print(f"nao foi encontrado o EAN da sheet {sheet}")
 
