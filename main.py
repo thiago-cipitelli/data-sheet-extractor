@@ -5,6 +5,7 @@ from produto import Produto
 
 # lembrar de procurar sempre o ultima aparicao na linha (ultima cedula)
 #TODO:  integrar com API para buscar o nome certo do produto pelo EAN (https://www.ean-search.org/)
+#ATENCAO: nem todos os produtos aparecem no ean
 
 variacoes_descricao = [
     "prod",
@@ -52,10 +53,20 @@ def get_header_index(df: pd.DataFrame) -> int:
     return header_index
 
 
+def ean_valido(ean: str) -> bool:
+    if str(ean).isdigit() and len(str(ean)) > 12:
+        return True
+
+    return False
+
+
 def produto_unico(ean: str, lista_prods: list[Produto]) -> bool:
     for prod in lista_prods:
-        if prod.ean == ean:
-            return False
+        try:
+            if int(prod.ean) == int(ean):
+                return False
+        except (ValueError, TypeError):
+            continue
 
     return True
 
@@ -75,7 +86,7 @@ def extract_products(file, sheet, produtos):
 
     if not df.empty:
         for index, row in df.iterrows():
-            if not pd.isna(row[ean_column]) and produto_unico(row[ean_column], produtos):
+            if not pd.isna(row[ean_column]) and ean_valido(row[ean_column]) and produto_unico(row[ean_column], produtos):
                 produtos.append(Produto(row[ean_column], row[description_column], row[estoque_column]))
     else:
         print(f"nao foi encontrado o EAN da sheet {sheet}")
