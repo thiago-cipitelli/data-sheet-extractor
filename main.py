@@ -3,9 +3,11 @@ import pandas as pd
 from produto import Produto
 
 
+# refatorar codigo para pegar o estoque
 # lembrar de procurar sempre o ultima aparicao na linha (ultima cedula)
 #TODO:  integrar com API para buscar o nome certo do produto pelo EAN (https://www.ean-search.org/)
 #ATENCAO: nem todos os produtos aparecem no ean
+
 
 variacoes_descricao = [
     "prod",
@@ -42,7 +44,16 @@ def find_product(ean: str, lista_prods: list[Produto]):
         if int(prod.ean) == int(ean):
             return prod
 
-def get_column(df: pd.DataFrame, dictionary):
+
+def get_column_index(df: pd.DataFrame, dictionary):
+    pattern = '|'.join([v.replace('.', r'\.') for v in dictionary])
+    mask = df.apply(lambda col: col.astype(str).str.contains(pattern, case=False, na=False, regex=True))
+    column_index = mask.any(axis=0)[::-1].idxmax()
+
+    return df.columns.get_loc(column_index)
+
+
+def get_column_name(df: pd.DataFrame, dictionary):
     colunas_lower = [col.lower() for col in dictionary]
 
     for col in df.columns:
@@ -55,6 +66,7 @@ def get_header_index(df: pd.DataFrame) -> int:
     pattern = '|'.join([v.replace('.', r'\.') for v in variacoes_codigo_barras])
     mask = df.apply(lambda col: col.astype(str).str.contains(pattern, case=False, na=False, regex=True))
     header_index = mask.any(axis=1)[::-1].idxmax()
+
     return header_index
 
 
@@ -78,22 +90,36 @@ def extract_products(file, sheet, produtos):
 
     header_index = get_header_index(df)
     df.columns = df.iloc[header_index]
+
+    ean_column_name = get_column_name(df, variacoes_codigo_barras)
+
+    if ean_column_name is None:
+        print(f"nao foi encontrado o EAN da planilha {sheet}")
+        return
+
+    description_column_name = get_column_name(df, variacoes_descricao)
+    estoque_column_name = get_column_name(df, variacoes_estoque)
+
+    description_column_index = get_column_index(df, variacoes_descricao)
+    estoque_column_index = get_column_index(df, variacoes_estoque)
+
+    cols = df.columns.tolist()
+    cols[estoque_column_index] = estoque_column_name
+    cols[description_column_index] = description_column_name
+    df.columns = cols
+
     drop_header = header_index + 1
     df = df[drop_header:].reset_index(drop=True)
 
-    ean_column = get_column(df, variacoes_codigo_barras)
-    description_column = get_column(df, variacoes_descricao)
-    estoque_column = get_column(df, variacoes_estoque)
-
-    if not df.empty:
-        for index, row in df.iterrows():
-            if not pd.isna(row[ean_column]) and ean_valido(row[ean_column]):
-                if produto_unico(row[ean_column], produtos):
-                    produtos.append(Produto(row[ean_column], row[description_column], row[estoque_column]))
-
-
-    else:
-        print(f"nao foi encontrado o EAN da sheet {sheet}")
+    print(sheet)
+    for index, row in df.iterrows():
+        if not pd.isna(row[ean_column_name]) and ean_valido(row[ean_column_name]):
+            if produto_unico(row[ean_column_name], produtos):
+                produtos.append(Produto(row[ean_column_name], row[description_column_name], row[estoque_column_name]))
+            else:
+                print(row[estoque_column_name])
+                #prod = find_product(row[ean_column_name], produtos)
+                #prod.estoque += int(row[estoque_column_name])
 
 
 def main():
