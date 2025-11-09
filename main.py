@@ -1,6 +1,7 @@
 import argparse
 import pandas as pd
 from produto import Produto
+from tqdm import tqdm
 
 
 # refatorar codigo para pegar o estoque
@@ -97,6 +98,7 @@ def valida_coluna_estoque(column_index: int, sheet: str) -> bool:
 
 
 def extract_products(file, sheet, produtos):
+    errors = []
     df = pd.read_excel(file, sheet_name=sheet, header=None)
     df = df.ffill()
 
@@ -125,7 +127,6 @@ def extract_products(file, sheet, produtos):
     drop_header = header_index + 1
     df = df[drop_header:].reset_index(drop=True)
 
-    print(sheet)
     for index, row in df.iterrows():
         if not pd.isna(row[ean_column_name]) and ean_valido(row[ean_column_name]):
             if produto_unico(row[ean_column_name], produtos):
@@ -136,9 +137,11 @@ def extract_products(file, sheet, produtos):
                         prod = find_product(row[ean_column_name], produtos)
                         prod.estoque += int(row[estoque_column_name])
                     except Exception as e:
-                        print(f"Erro ao inserir estoque no produto {prod.descricao} na planilha {sheet}")
+                        errors.append(f"Erro ao inserir estoque no produto {prod.descricao} na planilha {sheet}")
                 else:
-                    print("estoque invalido")
+                    errors.append(f"estoque invalido na planilha {sheet}")
+
+    return [*errors]
 
 
 def main():
@@ -149,11 +152,14 @@ def main():
     excel_file = pd.ExcelFile(args.arquivo)
     sheets = excel_file.sheet_names
     produtos = []
+    errors = []
 
-    for sheet in sheets:
-        extract_products("mapa.xlsx", sheet, produtos)
+    for sheet in tqdm(sheets):
+        errors.append(extract_products("mapa.xlsx", sheet, produtos))
 
-    print(f"{len(produtos)} produtos encontrados")
+    print(errors)
+
+    print(f"{len(produtos)} produtos encontrados:")
     for p in produtos:
         print(p)
 
