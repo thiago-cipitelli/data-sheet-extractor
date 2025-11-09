@@ -20,6 +20,7 @@ variacoes_estoque = [
     "dsp",
     "estoque",
     "total",
+    "saldo"
 ]
 
 variacoes_codigo_barras = [
@@ -49,6 +50,10 @@ def get_column_index(df: pd.DataFrame, dictionary):
     pattern = '|'.join([v.replace('.', r'\.') for v in dictionary])
     mask = df.apply(lambda col: col.astype(str).str.contains(pattern, case=False, na=False, regex=True))
     column_index = mask.any(axis=0)[::-1].idxmax()
+    
+    any_match = mask.any(axis=0)
+    if not any_match.any():
+        return -1
 
     return df.columns.get_loc(column_index)
 
@@ -83,6 +88,13 @@ def produto_unico(ean: str, lista_prods: list[Produto]) -> bool:
 
     return True
 
+def valida_coluna_estoque(column_index: int, sheet: str) -> bool:
+    if column_index == -1:
+        print(f"coluna Estoque faltando na planilha {sheet}")
+        return False
+
+    return True
+
 
 def extract_products(file, sheet, produtos):
     df = pd.read_excel(file, sheet_name=sheet, header=None)
@@ -103,6 +115,8 @@ def extract_products(file, sheet, produtos):
     description_column_index = get_column_index(df, variacoes_descricao)
     estoque_column_index = get_column_index(df, variacoes_estoque)
 
+    estoque_valido = valida_coluna_estoque(estoque_column_index, sheet)
+
     cols = df.columns.tolist()
     cols[estoque_column_index] = estoque_column_name
     cols[description_column_index] = description_column_name
@@ -117,9 +131,14 @@ def extract_products(file, sheet, produtos):
             if produto_unico(row[ean_column_name], produtos):
                 produtos.append(Produto(row[ean_column_name], row[description_column_name], row[estoque_column_name]))
             else:
-                print(row[estoque_column_name])
-                #prod = find_product(row[ean_column_name], produtos)
-                #prod.estoque += int(row[estoque_column_name])
+                if estoque_valido:
+                    try:
+                        prod = find_product(row[ean_column_name], produtos)
+                        prod.estoque += int(row[estoque_column_name])
+                    except Exception as e:
+                        print(f"Erro ao inserir estoque no produto {prod.descricao} na planilha {sheet}")
+                else:
+                    print("estoque invalido")
 
 
 def main():
