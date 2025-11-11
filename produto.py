@@ -3,6 +3,10 @@ class Produto:
         self.ean = ean
         self.descricao = descricao
         self.estoque = estoque
+        self.vendas = []
+
+    def adicionar_venda(self, venda):
+        self.vendas.append(venda)
 
     def __str__(self):
         return f"Produto(EAN={self.ean}, Desc={self.descricao}, Estoque={self.estoque})"
