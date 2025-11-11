@@ -49,7 +49,6 @@ def extract_products(file, sheet, produtos):
     description_column_name = get_column_name(df, variacoes_descricao)
     estoque_column_name = get_column_name(df, variacoes_estoque)
 
-    description_column_index = get_column_index(df, variacoes_descricao)
     estoque_column_index = get_column_index(df, variacoes_estoque)
 
     estoque_valido = valida_coluna_estoque(estoque_column_index, sheet)
