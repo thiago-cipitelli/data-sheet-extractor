@@ -108,8 +108,7 @@ def extract_products(file, sheet, produtos):
     ean_column_name = get_column_name(df, variacoes_codigo_barras)
 
     if ean_column_name is None:
-        print(f"nao foi encontrado o EAN da planilha {sheet}")
-        return
+        return [f"nao foi encontrado o EAN"]
 
     description_column_name = get_column_name(df, variacoes_descricao)
     estoque_column_name = get_column_name(df, variacoes_estoque)
@@ -137,9 +136,9 @@ def extract_products(file, sheet, produtos):
                         prod = find_product(row[ean_column_name], produtos)
                         prod.estoque += int(row[estoque_column_name])
                     except Exception as e:
-                        errors.append(f"Erro ao inserir estoque no produto {prod.descricao} na planilha {sheet}")
+                        errors.append(f"Erro ao inserir estoque no produto {prod.descricao}")
                 else:
-                    errors.append(f"estoque invalido na planilha {sheet}")
+                    errors.append(f"estoque invalido")
 
     return [*errors]
 
@@ -152,17 +151,20 @@ def main():
     excel_file = pd.ExcelFile(args.arquivo)
     sheets = excel_file.sheet_names
     produtos = []
-    errors = []
+    errors = dict()
 
     for sheet in tqdm(sheets):
         sheet_errors = extract_products("mapa.xlsx", sheet, produtos) 
         if sheet_errors:
-            errors.append(sheet_errors)
+            errors[sheet] = sheet_errors
 
     print(f"{len(errors)} erros encontrados:")
 
-    for e in errors:
-        print(e)
+    for i, error in errors.items():
+        print(i)
+
+        for e in error:
+            print(e)
 
     print(f"{len(produtos)} produtos encontrados:")
     for p in produtos:
