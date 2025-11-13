@@ -3,6 +3,7 @@ import pandas as pd
 from tqdm import tqdm
 from extractor.produto_extractor import extract_products
 from models.produto import Produto
+from utils.normalizacao import normalizar_mes
 
 def main():
     parser = argparse.ArgumentParser(description="Extrai produtos de um arquivo Excel")
@@ -12,10 +13,11 @@ def main():
     excel_file = pd.ExcelFile(args.arquivo)
     sheets = excel_file.sheet_names
     produtos = []
+    vendas = []
     errors = {}
 
     for sheet in tqdm(sheets):
-        sheet_errors = extract_products(args.arquivo, sheet, produtos)
+        sheet_errors = extract_products(args.arquivo, sheet, produtos, vendas)
         if sheet_errors:
             errors[sheet] = sheet_errors
 

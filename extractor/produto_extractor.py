@@ -3,6 +3,8 @@ from utils.helpers import (
     find_product, ean_valido, produto_unico, valida_coluna_estoque
 )
 from models.produto import Produto
+from models.venda_mensal import VendaMensal
+from utils.normalizacao import normalizar_mes
 
 variacoes_descricao = ["prod", "descrição", "desc"]
 variacoes_estoque = ["disp", "dsp", "estoque", "total", "saldo"]
@@ -34,7 +36,29 @@ def get_header_index(df: pd.DataFrame) -> int:
     header_index = mask.any(axis=1)[::-1].idxmax()
     return header_index
 
-def extract_products(file, sheet, produtos):
+def get_months_columns(columns):
+    meses = []
+    for col in columns:
+        if normalizar_mes(col):
+            meses.append(col)
+
+    return meses
+
+def extract_vendas(produto, meses, valores):
+    vendas = []
+    for mes in meses:
+        try:
+            valor_mes = int(valores[mes])
+        except Exception as e:
+            valor_mes = 0
+        venda = VendaMensal(produto, None, normalizar_mes(mes), valor_mes)
+        vendas.append(venda)
+        produto.adiciona_venda(venda)
+
+    return [*vendas]
+
+
+def extract_products(file, sheet, produtos, vendas):
     errors = []
     df = pd.read_excel(file, sheet_name=sheet, header=None)
     df = df.ffill()
@@ -56,11 +80,19 @@ def extract_products(file, sheet, produtos):
     drop_header = header_index + 1
     df = df[drop_header:].reset_index(drop=True)
 
+    meses = get_months_columns(df.columns)
+    # [may/2025, jun/2025, ...]
+    
+
+    print(sheet)
     for _, row in df.iterrows():
         ean = row.get(ean_column_name)
         if pd.notna(ean) and ean_valido(ean):
             if produto_unico(ean, produtos):
-                produtos.append(Produto(ean, row[description_column_name], row[estoque_column_name]))
+                prod = Produto(ean, row[description_column_name], row[estoque_column_name])
+                produtos.append(prod)
+                
+
             else:
                 if estoque_valido:
                     try:
@@ -70,5 +102,8 @@ def extract_products(file, sheet, produtos):
                         errors.append(f"Erro ao inserir estoque no produto {prod.descricao}")
                 else:
                     errors.append(f"estoque inválido")
+
+            print(meses)
+            vendas = extract_vendas(prod, meses, row)
 
     return errors

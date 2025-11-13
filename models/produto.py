@@ -5,7 +5,7 @@ class Produto:
         self.estoque = estoque
         self.vendas = []
 
-    def adicionar_venda(self, venda):
+    def adiciona_venda(self, venda):
         self.vendas.append(venda)
 
     def vendas_total(self):

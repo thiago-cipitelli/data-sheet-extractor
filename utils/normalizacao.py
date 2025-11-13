@@ -12,6 +12,7 @@ def normalizar_mes(valor):
     )
 
     match = re.match(r"^0?(\d{1,2})", texto)
+
     if match:
         numero = int(match.group(1))
         if 1 <= numero <= 12:
@@ -32,4 +33,8 @@ def normalizar_mes(valor):
         "dez": 12, "dezembro": 12,
     }
 
-    return meses.get(texto)
+    for key, numero in meses.items():
+        if key in texto:
+            return numero
+
+    return None
