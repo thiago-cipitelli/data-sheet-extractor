@@ -88,7 +88,7 @@ def extract_products(file, sheet, produtos, vendas):
         ean = row.get(ean_column_name)
         if pd.notna(ean) and ean_valido(ean):
             if produto_unico(ean, produtos):
-                prod = Produto(ean, row[description_column_name], row[estoque_column_name])
+                prod = Produto(str(ean), row[description_column_name], row[estoque_column_name])
                 produtos.append(prod)
                 
 
